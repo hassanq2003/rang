@@ -1,0 +1,12 @@
+# Render Blueprint for the Rang game server (Socket.io). Deploy: Render dashboard → New → Blueprint → this repo.
+services:
+  - type: web
+    name: rang-server
+    runtime: node
+    plan: free
+    buildCommand: cd server && npm install
+    startCommand: node server/index.ts
+    healthCheckPath: /
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
