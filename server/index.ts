@@ -38,7 +38,8 @@ interface Room {
 const rooms = new Map<string, Room>();
 const http = createServer((_req, res) => {
   res.writeHead(200, { 'content-type': 'text/plain' });
-  res.end(`Rang server OK — ${rooms.size} room(s)`);
+  const commit = (process.env.RAILWAY_GIT_COMMIT_SHA ?? 'local').slice(0, 7);
+  res.end(`Rang server OK - ${rooms.size} room(s) - build ${commit}`);
 });
 const io = new Server(http, { cors: { origin: '*' } });
 
