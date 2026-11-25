@@ -1,6 +1,6 @@
 import React from 'react';
-import RangScreen from './src/screens/RangScreen';
+import HomeScreen from './src/screens/HomeScreen';
 
 export default function App() {
-  return <RangScreen />;
+  return <HomeScreen />;
 }

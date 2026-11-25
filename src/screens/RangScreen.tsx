@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   Easing,
@@ -15,7 +15,8 @@ import {
 } from 'react-native';
 import { io, type Socket } from 'socket.io-client';
 import { CARDS } from '../../cards';
-import { SUITS, rankLabel, teamOf, type Card, type PlayerView, type Seat, type Suit } from '../game/rang';
+import { SUITS, makeCard, rankLabel, teamOf, type Card, type PlayerView, type Seat, type Suit } from '../game/rang';
+import { useGameSounds } from '../game/sounds';
 
 interface RoomPayload {
   roomId: string;
@@ -27,7 +28,7 @@ interface RoomPayload {
   deadlineAt?: number | null;
 }
 
-const SUIT_SYMBOL: Record<Suit, string> = { hearts: 'â™¥', diamonds: 'â™¦', clubs: 'â™£', spades: 'â™ ' };
+const SUIT_SYMBOL: Record<Suit, string> = { hearts: '♥', diamonds: '♦', clubs: '♣', spades: '♠' };
 const RANK_FILE: Record<number, string> = { 11: 'jack', 12: 'queen', 13: 'king', 14: 'ace' };
 const IMAGE_BY_ID = new Map(CARDS.map((c) => [c.id, c.image]));
 const imageFor = (card: Card) => IMAGE_BY_ID.get(`${RANK_FILE[card.rank] ?? card.rank}_of_${card.suit}`);
@@ -44,8 +45,12 @@ const CH = 78;
 const HOLD_MS = 1000;
 const FLY_MS = 480;
 
-export default function RangScreen() {
-  const [serverUrl, setServerUrl] = useState(DEFAULT_URL);
+export const ONLINE_SERVER_URL = DEFAULT_URL;
+export const LAN_SERVER_URL = Platform.OS === 'web' ? 'http://localhost:3000' : `http://${LOCAL_PC_IP}:3000`;
+
+/** Create/join a room on a server: online (hosted) or local (a PC on the same Wi-Fi). */
+export function NetworkPlay({ initialUrl, editableUrl, title, onBack }: { initialUrl: string; editableUrl: boolean; title: string; onBack: () => void }) {
+  const [serverUrl, setServerUrl] = useState(initialUrl);
   const [roomId, setRoomId] = useState('');
   const [name, setName] = useState('');
   const [room, setRoom] = useState<RoomPayload | null>(null);
@@ -62,7 +67,7 @@ export default function RangScreen() {
     if (mode === 'join' && !roomId.trim()) return setMessage('Enter a room number, or create a room.');
     socketRef.current?.disconnect();
     roomIdRef.current = mode === 'join' ? roomId.trim() : null;
-    setMessage('Connecting to serverâ€¦ (a sleeping free server can take ~30s)');
+    setMessage('Connecting to server… (a sleeping free server can take ~30s)');
     const s = io(serverUrl, { transports: ['websocket', 'polling'], timeout: 40000, reconnectionDelayMax: 4000 });
     socketRef.current = s;
     s.on('connect', () => {
@@ -74,7 +79,7 @@ export default function RangScreen() {
     s.on('disconnect', () => setOnline(false));
     s.on('connect_error', () => {
       setOnline(false);
-      setMessage(`Can't reach server at ${serverUrl}. Retryingâ€¦`);
+      setMessage(`Can't reach server at ${serverUrl}. Retrying…`);
     });
     s.on('room', (payload: RoomPayload) => {
       roomIdRef.current = payload.roomId;
@@ -98,32 +103,19 @@ export default function RangScreen() {
     return (
       <SafeAreaView style={styles.root}>
         <View style={styles.joinBox}>
-          <Text style={styles.title}>Rang</Text>
-          <View style={styles.urlToggleRow}>
-            {!!ONLINE_URL && (
-              <Pressable style={[styles.chip, serverUrl === ONLINE_URL && styles.chipActive]} onPress={() => setServerUrl(ONLINE_URL)}>
-                <Text style={styles.chipText}>ðŸŒ Online</Text>
-              </Pressable>
-            )}
-            <Pressable
-              style={[styles.chip, serverUrl === 'http://localhost:3000' && styles.chipActive]}
-              onPress={() => setServerUrl('http://localhost:3000')}
-            >
-              <Text style={styles.chipText}>ðŸ’» Localhost (Web)</Text>
-            </Pressable>
-            <Pressable
-              style={[styles.chip, serverUrl === `http://${LOCAL_PC_IP}:3000` && styles.chipActive]}
-              onPress={() => setServerUrl(`http://${LOCAL_PC_IP}:3000`)}
-            >
-              <Text style={styles.chipText}>ðŸ“± Phone ({LOCAL_PC_IP})</Text>
-            </Pressable>
-          </View>
-          <TextInput style={styles.input} value={serverUrl} onChangeText={setServerUrl} placeholder="Server URL" placeholderTextColor="#8aa" autoCapitalize="none" />
+          <Pressable onPress={onBack}><Text style={styles.backLink}>← Back</Text></Pressable>
+          <Text style={styles.title}>{title}</Text>
+          {editableUrl && (
+            <>
+              <Text style={styles.small}>Server running on a PC on this Wi-Fi (npm run server). Enter the PC&apos;s IP.</Text>
+              <TextInput style={styles.input} value={serverUrl} onChangeText={setServerUrl} placeholder="http://192.168.x.x:3000" placeholderTextColor="#8aa" autoCapitalize="none" />
+            </>
+          )}
           <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Your name" placeholderTextColor="#8aa" />
           <Pressable style={styles.button} onPress={() => connect('create')}>
             <Text style={styles.buttonText}>Create new room</Text>
           </Pressable>
-          <Text style={styles.or}>â€” or join a friend â€”</Text>
+          <Text style={styles.or}>— or join a friend —</Text>
           <TextInput style={styles.input} value={roomId} onChangeText={setRoomId} placeholder="Room number" placeholderTextColor="#8aa" keyboardType="number-pad" />
           <Pressable style={[styles.button, styles.buttonAlt]} onPress={() => connect('join')}>
             <Text style={[styles.buttonText, styles.buttonAltText]}>Join room</Text>
@@ -136,7 +128,7 @@ export default function RangScreen() {
 
   return (
     <SafeAreaView style={styles.root}>
-      {!online && <Text style={styles.offline}>Connection lost â€” reconnectingâ€¦</Text>}
+      {!online && <Text style={styles.offline}>Connection lost — reconnecting…</Text>}
       <Game room={room} message={message} emit={emit} onLeave={leave} />
     </SafeAreaView>
   );
@@ -164,7 +156,7 @@ function CardBackView({ w, h }: { w: number; h: number }) {
   return (
     <View style={[styles.back, { width: w, height: h }]}>
       <View style={styles.backInner}>
-        <Text style={[styles.backSymbol, { fontSize: Math.max(10, w / 3) }]}>â™¦</Text>
+        <Text style={[styles.backSymbol, { fontSize: Math.max(10, w / 3) }]}>♦</Text>
       </View>
     </View>
   );
@@ -363,14 +355,14 @@ function Countdown({ at }: { at: number }) {
     return () => clearInterval(t);
   }, []);
   const secs = Math.max(0, Math.ceil((at - now) / 1000));
-  return <Text style={[styles.countdown, secs <= 10 && styles.countdownLow]}>â± {secs}s</Text>;
+  return <Text style={[styles.countdown, secs <= 10 && styles.countdownLow]}>⏱ {secs}s</Text>;
 }
 
 // ------------------------------------------------------------------- game
 
 type Emit = (event: string, payload: object) => void;
 
-function Game({ room, message, emit, onLeave }: { room: RoomPayload; message: string | null; emit: Emit; onLeave: () => void }) {
+export function Game({ room, message, emit, onLeave }: { room: RoomPayload; message: string | null; emit: Emit; onLeave: () => void }) {
   const { seat, players, game } = room;
   const [size, setSize] = useState({ w: 0, h: 0 });
   const onLayout = (e: LayoutChangeEvent) => setSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height });
@@ -391,6 +383,7 @@ function Game({ room, message, emit, onLeave }: { room: RoomPayload; message: st
   const shownPiles = JSON.parse(useDelayed(pileKey, collecting ? HOLD_MS + FLY_MS + 300 : 0)) as
     | [(number | null)[], (number | null)[]]
     | null;
+  useGameSounds(game, seat, message, HOLD_MS);
 
   const header = (
     <View style={styles.header}>
@@ -411,18 +404,18 @@ function Game({ room, message, emit, onLeave }: { room: RoomPayload; message: st
       <View style={styles.flex}>
         {header}
         <View style={styles.center}>
-          <Text style={styles.small}>Room number â€” share it with friends</Text>
+          <Text style={styles.small}>Room number — share it with friends</Text>
           <PopIn><Text style={styles.roomCode}>{room.roomId}</Text></PopIn>
           <Text style={styles.status}>Waiting for players ({players.length}/4)</Text>
           {players.map((p, i) => (
             <PopIn key={p.name} delay={i * 80}>
               <Text style={styles.playerLine}>
-                Seat {i + 1}: {p.bot ? 'ðŸ¤– ' : ''}{p.name}{i === seat ? ' (you)' : ''} Â· Team {i % 2 === 0 ? 'A' : 'B'}
+                Seat {i + 1}: {p.bot ? '🤖 ' : ''}{p.name}{i === seat ? ' (you)' : ''} · Team {i % 2 === 0 ? 'A' : 'B'}
               </Text>
             </PopIn>
           ))}
           <Pressable style={[styles.button, styles.smallButton]} onPress={() => emit('addBot', {})}>
-            <Text style={styles.buttonText}>ðŸ¤– Add bot</Text>
+            <Text style={styles.buttonText}>🤖 Add bot</Text>
           </Pressable>
           {message && <ShakeText key={message} text={message} />}
         </View>
@@ -466,7 +459,7 @@ function Game({ room, message, emit, onLeave }: { room: RoomPayload; message: st
         <View style={styles.nameRow}>
           {game.phase === 'playing' && game.turn === s && <TurnPulse />}
           <Text style={[styles.seatName, teamOf(s) === myTeam && styles.allyName, game.turn === s && game.phase === 'playing' && styles.activeSeat]}>
-            {nameOf(s)}{s === seat ? ' (you)' : ''}{s === game.chooser ? ' â˜…' : ''}{!players[s]?.connected ? ' âš ' : ''}
+            {nameOf(s)}{s === seat ? ' (you)' : ''}{s === game.chooser ? ' ★' : ''}{!players[s]?.connected ? ' ⚠' : ''}
           </Text>
         </View>
         <Text style={styles.small}>{game.handCounts[s]} in hand</Text>
@@ -477,13 +470,13 @@ function Game({ room, message, emit, onLeave }: { room: RoomPayload; message: st
 
   let status: string;
   if (game.phase === 'choosing') {
-    status = game.chooser === seat ? 'You are the Rang chooser. Pick Rang from your 5 cards.' : `${nameOf(game.chooser)} is choosing Rangâ€¦`;
+    status = game.chooser === seat ? 'You are the Rang chooser. Pick Rang from your 5 cards.' : `${nameOf(game.chooser)} is choosing Rang…`;
   } else if (finished) {
     status = 'Game over';
   } else if (myTurn) {
-    status = game.trick.length ? 'Your turn â€” follow suit or throw Rang.' : 'Your turn â€” lead any card.';
+    status = game.trick.length ? 'Your turn — follow suit or throw Rang.' : 'Your turn — lead any card.';
   } else {
-    status = `Waiting for ${nameOf(game.turn)}â€¦`;
+    status = `Waiting for ${nameOf(game.turn)}…`;
   }
   if (collecting && last && !finished) status = `${nameOf(last.winner)} won the round. ${status}`;
 
@@ -546,7 +539,7 @@ function Game({ room, message, emit, onLeave }: { room: RoomPayload; message: st
                     ))}
                     <PopIn key={`bank-${game.tricksPlayed}`} delay={HOLD_MS} fadeAfter={1400} style={styles.bankToast}>
                       <Text style={styles.bankText}>
-                        âœ¨ {nameOf(last.winner)} won twice in a row â€” pair to {last.banked === myTeam ? 'our' : 'their'} pile!
+                        ✨ {nameOf(last.winner)} won twice in a row — pair to {last.banked === myTeam ? 'our' : 'their'} pile!
                       </Text>
                     </PopIn>
                   </>
@@ -559,7 +552,7 @@ function Game({ room, message, emit, onLeave }: { room: RoomPayload; message: st
         {finished && game.result && (
           <PopIn delay={HOLD_MS + FLY_MS} style={styles.resultCard}>
             <Text style={styles.resultTitle}>
-              {game.result.winner === 'draw' ? 'ðŸ¤ Draw' : game.result.winner === myTeam ? 'ðŸ† Your team wins!' : 'Opponents win'}
+              {game.result.winner === 'draw' ? '🤝 Draw' : game.result.winner === myTeam ? '🏆 Your team wins!' : 'Opponents win'}
             </Text>
             <Text style={styles.resultLine}>Our pile: {game.result.permanentCounts[myTeam]} cards</Text>
             <Text style={styles.resultLine}>Their pile: {game.result.permanentCounts[1 - myTeam]} cards</Text>
@@ -581,8 +574,9 @@ function Game({ room, message, emit, onLeave }: { room: RoomPayload; message: st
         <View style={styles.suitRow}>
           {SUITS.map((s, i) => (
             <PopIn key={s} delay={i * 90}>
-              <Pressable style={styles.suitButton} onPress={() => emit('chooseRang', { suit: s })}>
-                <Text style={[styles.suitText, (s === 'hearts' || s === 'diamonds') && styles.red]}>{SUIT_SYMBOL[s]}</Text>
+              <Pressable style={styles.suitButton} onPress={() => emit('chooseRang', { suit: s })} accessibilityLabel={`Choose ${s} as Rang`}>
+                <Image source={imageFor(makeCard(10, s))} style={styles.suitCard} resizeMode="contain" />
+                <Text style={styles.suitName}>{s}</Text>
               </Pressable>
             </PopIn>
           ))}
@@ -668,8 +662,10 @@ const styles = StyleSheet.create({
   faded: { opacity: 0.45 },
   status: { color: '#fff', textAlign: 'center', paddingHorizontal: 16, paddingVertical: 4 },
   suitRow: { flexDirection: 'row', justifyContent: 'center', gap: 12, padding: 8 },
-  suitButton: { backgroundColor: '#fff', borderRadius: 8, width: 56, height: 56, alignItems: 'center', justifyContent: 'center' },
-  suitText: { fontSize: 32, color: '#000' },
+  suitButton: { alignItems: 'center', padding: 4, borderRadius: 8, borderWidth: 2, borderColor: '#d4af37', backgroundColor: 'rgba(0,0,0,0.2)' },
+  suitCard: { width: 62, height: 90, borderRadius: 5, backgroundColor: '#fff' },
+  suitName: { color: '#ffe48a', fontSize: 11, fontWeight: '700', marginTop: 2, textTransform: 'capitalize' },
+  backLink: { color: '#d4af37', fontSize: 16, marginBottom: 4 },
   red: { color: '#c0392b' },
   handScroll: { flexGrow: 0 },
   hand: { paddingHorizontal: 8, paddingTop: 18, paddingBottom: 8, gap: 4 },
