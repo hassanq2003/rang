@@ -18,6 +18,7 @@ import { CARDS } from '../../cards';
 import { SUITS, makeCard, rankLabel, teamOf, type Card, type PlayerView, type Seat, type Suit } from '../game/rang';
 import { useGameSounds } from '../game/sounds';
 import { ThemedBackground, themed } from '../theme';
+import { recordFrom, saveGame, type GameMode } from '../game/history';
 
 interface RoomPayload {
   roomId: string;
@@ -50,10 +51,10 @@ export const ONLINE_SERVER_URL = DEFAULT_URL;
 export const LAN_SERVER_URL = Platform.OS === 'web' ? 'http://localhost:3000' : `http://${LOCAL_PC_IP}:3000`;
 
 /** Create/join a room on a server: online (hosted) or local (a PC on the same Wi-Fi). */
-export function NetworkPlay({ initialUrl, editableUrl, title, onBack }: { initialUrl: string; editableUrl: boolean; title: string; onBack: () => void }) {
+export function NetworkPlay({ initialUrl, editableUrl, title, onBack, defaultName = '', mode }: { initialUrl: string; editableUrl: boolean; title: string; onBack: () => void; defaultName?: string; mode: GameMode }) {
   const [serverUrl, setServerUrl] = useState(initialUrl);
   const [roomId, setRoomId] = useState('');
-  const [name, setName] = useState('');
+  const [name, setName] = useState(defaultName);
   const [room, setRoom] = useState<RoomPayload | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [online, setOnline] = useState(true);
@@ -132,7 +133,7 @@ export function NetworkPlay({ initialUrl, editableUrl, title, onBack }: { initia
   return (
     <SafeAreaView style={styles.root}>
       {!online && <Text style={styles.offline}>Connection lost — reconnecting…</Text>}
-      <Game room={room} message={message} emit={emit} onLeave={leave} />
+      <Game room={room} message={message} emit={emit} onLeave={leave} mode={mode} />
     </SafeAreaView>
   );
 }
@@ -365,7 +366,7 @@ function Countdown({ at }: { at: number }) {
 
 type Emit = (event: string, payload: object) => void;
 
-export function Game({ room, message, emit, onLeave }: { room: RoomPayload; message: string | null; emit: Emit; onLeave: () => void }) {
+export function Game({ room, message, emit, onLeave, mode }: { room: RoomPayload; message: string | null; emit: Emit; onLeave: () => void; mode: GameMode }) {
   const { seat, players, game } = room;
   const [size, setSize] = useState({ w: 0, h: 0 });
   const onLayout = (e: LayoutChangeEvent) => setSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height });
@@ -387,6 +388,16 @@ export function Game({ room, message, emit, onLeave }: { room: RoomPayload; mess
     | [(number | null)[], (number | null)[]]
     | null;
   useGameSounds(game, seat, message, HOLD_MS);
+
+  // Save to history once, when this client sees the game change to finished.
+  const prevPhase = useRef(game?.phase);
+  useEffect(() => {
+    const was = prevPhase.current;
+    prevPhase.current = game?.phase;
+    if (!game || game.phase !== 'finished' || !was || was === 'finished') return;
+    const rec = recordFrom(game, seat, players.map((p) => p.name), mode, room.roomId);
+    if (rec) saveGame(rec).catch((e) => console.warn('History save failed', e));
+  }, [game, seat, players, mode, room.roomId]);
 
   const header = (
     <View style={styles.header}>
