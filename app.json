@@ -5,14 +5,15 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0b0404",
     "ios": {
       "supportsTablet": true
     },
     "android": {
       "package": "com.rang.cardgame",
       "adaptiveIcon": {
-        "backgroundColor": "#114a27",
+        "backgroundColor": "#0b0404",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -28,7 +29,16 @@
       }
     },
     "plugins": [
-      "expo-audio"
+      "expo-audio",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash.png",
+          "imageWidth": 220,
+          "resizeMode": "contain",
+          "backgroundColor": "#0b0404"
+        }
+      ]
     ]
   }
 }

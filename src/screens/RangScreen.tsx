@@ -17,6 +17,7 @@ import { io, type Socket } from 'socket.io-client';
 import { CARDS } from '../../cards';
 import { SUITS, makeCard, rankLabel, teamOf, type Card, type PlayerView, type Seat, type Suit } from '../game/rang';
 import { useGameSounds } from '../game/sounds';
+import { ThemedBackground, themed } from '../theme';
 
 interface RoomPayload {
   roomId: string;
@@ -101,28 +102,30 @@ export function NetworkPlay({ initialUrl, editableUrl, title, onBack }: { initia
 
   if (!room) {
     return (
-      <SafeAreaView style={styles.root}>
-        <View style={styles.joinBox}>
+      <ThemedBackground dim={0.72} blur={2}>
+      <SafeAreaView style={styles.flex}>
+        <View style={[styles.joinBox, themed.panel, styles.formPanel]}>
           <Pressable onPress={onBack}><Text style={styles.backLink}>← Back</Text></Pressable>
           <Text style={styles.title}>{title}</Text>
           {editableUrl && (
             <>
               <Text style={styles.small}>Server running on a PC on this Wi-Fi (npm run server). Enter the PC&apos;s IP.</Text>
-              <TextInput style={styles.input} value={serverUrl} onChangeText={setServerUrl} placeholder="http://192.168.x.x:3000" placeholderTextColor="#8aa" autoCapitalize="none" />
+              <TextInput style={styles.input} value={serverUrl} onChangeText={setServerUrl} placeholder="http://192.168.x.x:3000" placeholderTextColor="#a8907f" autoCapitalize="none" />
             </>
           )}
-          <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Your name" placeholderTextColor="#8aa" />
+          <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Your name" placeholderTextColor="#a8907f" />
           <Pressable style={styles.button} onPress={() => connect('create')}>
             <Text style={styles.buttonText}>Create new room</Text>
           </Pressable>
           <Text style={styles.or}>— or join a friend —</Text>
-          <TextInput style={styles.input} value={roomId} onChangeText={setRoomId} placeholder="Room number" placeholderTextColor="#8aa" keyboardType="number-pad" />
+          <TextInput style={styles.input} value={roomId} onChangeText={setRoomId} placeholder="Room number" placeholderTextColor="#a8907f" keyboardType="number-pad" />
           <Pressable style={[styles.button, styles.buttonAlt]} onPress={() => connect('join')}>
             <Text style={[styles.buttonText, styles.buttonAltText]}>Join room</Text>
           </Pressable>
           {message && <Text style={styles.error}>{message}</Text>}
         </View>
       </SafeAreaView>
+      </ThemedBackground>
     );
   }
 
@@ -401,7 +404,7 @@ export function Game({ room, message, emit, onLeave }: { room: RoomPayload; mess
 
   if (!game) {
     return (
-      <View style={styles.flex}>
+      <ThemedBackground dim={0.75} blur={2}>
         {header}
         <View style={styles.center}>
           <Text style={styles.small}>Room number — share it with friends</Text>
@@ -419,7 +422,7 @@ export function Game({ room, message, emit, onLeave }: { room: RoomPayload; mess
           </Pressable>
           {message && <ShakeText key={message} text={message} />}
         </View>
-      </View>
+      </ThemedBackground>
     );
   }
 
@@ -600,29 +603,36 @@ export function Game({ room, message, emit, onLeave }: { room: RoomPayload; mess
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#114a27' },
+  root: { flex: 1, backgroundColor: '#0b0404' },
   flex: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 16 },
   joinBox: { flex: 1, justifyContent: 'center', padding: 16, gap: 12, maxWidth: 420, width: '100%', alignSelf: 'center' },
   title: { color: '#d4af37', fontSize: 40, fontWeight: '800', textAlign: 'center', marginBottom: 12 },
   urlToggleRow: { flexDirection: 'row', justifyContent: 'center', gap: 8, marginBottom: 4 },
-  chip: { backgroundColor: 'rgba(255, 255, 255, 0.1)', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 16, borderWidth: 1, borderColor: '#2f7a4c' },
-  chipActive: { backgroundColor: '#1d733d', borderColor: '#d4af37' },
+  chip: { backgroundColor: 'rgba(255, 255, 255, 0.1)', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 16, borderWidth: 1, borderColor: '#5a1a1a' },
+  chipActive: { backgroundColor: '#7a1016', borderColor: '#d4af37' },
   chipText: { color: '#e5f5ea', fontSize: 12, fontWeight: '600' },
-  input: { backgroundColor: '#0a2e18', color: '#fff', borderRadius: 8, padding: 12, borderWidth: 1, borderColor: '#d4af37' },
-  button: { backgroundColor: '#d4af37', borderRadius: 8, padding: 14, alignItems: 'center' },
-  buttonText: { color: '#0a2e18', fontWeight: '700', fontSize: 16 },
+  input: { backgroundColor: 'rgba(0,0,0,0.55)', color: '#f3e9dc', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#d4af37' },
+  button: {
+    backgroundColor: '#c4161f', borderRadius: 12, padding: 14, alignItems: 'center', borderWidth: 1.5, borderColor: '#ffd98a',
+    shadowColor: '#c4161f', shadowOpacity: 0.7, shadowRadius: 12, elevation: 6,
+  },
+  buttonText: { color: '#f3e9dc', fontWeight: '900', fontSize: 16, letterSpacing: 1 },
   error: { color: '#ffb4a8', textAlign: 'center', marginTop: 6, paddingHorizontal: 16 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#0a2e18', padding: 12 },
+  header: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#1a0708', padding: 12,
+    borderBottomWidth: 1, borderBottomColor: '#7a5a1c',
+  },
   headerText: { color: '#d4af37', fontWeight: '700' },
   rangBadge: { backgroundColor: '#fff', borderRadius: 14, paddingHorizontal: 12, paddingVertical: 3, borderWidth: 2, borderColor: '#d4af37' },
   rangBadgeText: { fontWeight: '800', color: '#000' },
   leave: { color: '#ffb4a8' },
   teams: { flexDirection: 'row', justifyContent: 'center', gap: 10, paddingVertical: 6 },
-  teamText: { color: '#cde', fontSize: 12 },
+  teamText: { color: '#c9b3a3', fontSize: 12 },
   table: {
-    flex: 1, backgroundColor: '#165e33', margin: 8, borderRadius: 18, overflow: 'hidden',
-    borderWidth: 3, borderColor: '#0d3d21',
+    flex: 1, backgroundColor: '#2a080b', margin: 8, borderRadius: 22, overflow: 'hidden',
+    shadowColor: '#c4161f', shadowOpacity: 0.5, shadowRadius: 18, elevation: 8,
+    borderWidth: 3, borderColor: '#7a5a1c',
   },
   seatLabel: { position: 'absolute', alignItems: 'center' },
   label_bottom: { bottom: 6, left: 0, right: 0 },
@@ -631,10 +641,10 @@ const styles = StyleSheet.create({
   label_right: { right: 6, top: '38%' },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   seatName: { color: '#fff', fontWeight: '600' },
-  allyName: { color: '#a6f0c0' },
+  allyName: { color: '#ffd98a' },
   activeSeat: { color: '#d4af37' },
   pulse: { width: 9, height: 9, borderRadius: 5, backgroundColor: '#d4af37' },
-  small: { color: '#cde', fontSize: 11 },
+  small: { color: '#c9b3a3', fontSize: 11 },
   moving: { position: 'absolute', left: 0, top: 0, width: CW, height: CH, borderRadius: 6 },
   winnerGlow: { shadowColor: '#ffd84d', shadowOpacity: 1, shadowRadius: 12, elevation: 12, borderWidth: 2, borderColor: '#ffd84d' },
   tableCard: { width: CW, height: CH, borderRadius: 5, backgroundColor: '#fff' },
@@ -642,9 +652,9 @@ const styles = StyleSheet.create({
   backInner: { flex: 1, borderRadius: 2, borderWidth: 1, borderColor: '#d4af37', alignItems: 'center', justifyContent: 'center' },
   backSymbol: { color: '#d4af37' },
   pile: { alignItems: 'center' },
-  emptyPile: { position: 'absolute', left: 0, borderRadius: 4, borderWidth: 1, borderStyle: 'dashed', borderColor: '#4f9a6c' },
+  emptyPile: { position: 'absolute', left: 0, borderRadius: 4, borderWidth: 1, borderStyle: 'dashed', borderColor: '#8a6a2a' },
   qmark: { position: 'absolute', top: 18, left: 0, right: 0, textAlign: 'center', color: '#fff', fontWeight: '800', fontSize: 18 },
-  pileLabel: { color: '#cde', fontSize: 10, marginTop: 2 },
+  pileLabel: { color: '#c9b3a3', fontSize: 10, marginTop: 2 },
   pileCount: { color: '#d4af37', fontWeight: '800', fontSize: 13 },
   teamPile: { position: 'absolute' },
   bankToast: {
@@ -653,12 +663,12 @@ const styles = StyleSheet.create({
   },
   bankText: { color: '#ffe48a', fontWeight: '700', textAlign: 'center' },
   resultCard: {
-    position: 'absolute', alignSelf: 'center', top: '28%', backgroundColor: '#0a2e18', borderColor: '#d4af37',
+    position: 'absolute', alignSelf: 'center', top: '28%', backgroundColor: '#1a0708', borderColor: '#d4af37',
     borderWidth: 2, borderRadius: 16, padding: 20, alignItems: 'center', minWidth: 240,
   },
   resultTitle: { color: '#d4af37', fontSize: 24, fontWeight: '800', marginBottom: 8 },
   resultLine: { color: '#fff', fontSize: 16, marginTop: 2 },
-  resultNote: { color: '#9bb', fontSize: 11, marginTop: 8 },
+  resultNote: { color: '#a8907f', fontSize: 11, marginTop: 8 },
   faded: { opacity: 0.45 },
   status: { color: '#fff', textAlign: 'center', paddingHorizontal: 16, paddingVertical: 4 },
   suitRow: { flexDirection: 'row', justifyContent: 'center', gap: 12, padding: 8 },
@@ -666,6 +676,7 @@ const styles = StyleSheet.create({
   suitCard: { width: 62, height: 90, borderRadius: 5, backgroundColor: '#fff' },
   suitName: { color: '#ffe48a', fontSize: 11, fontWeight: '700', marginTop: 2, textTransform: 'capitalize' },
   backLink: { color: '#d4af37', fontSize: 16, marginBottom: 4 },
+  formPanel: { flex: 0, marginVertical: 'auto', margin: 16 },
   red: { color: '#c0392b' },
   handScroll: { flexGrow: 0 },
   hand: { paddingHorizontal: 8, paddingTop: 18, paddingBottom: 8, gap: 4 },
@@ -673,7 +684,7 @@ const styles = StyleSheet.create({
   legal: { borderColor: '#d4af37' },
   handImage: { width: 64, height: 92 },
   playerLine: { color: '#fff', marginTop: 4 },
-  or: { color: '#9bb', textAlign: 'center' },
+  or: { color: '#a8907f', textAlign: 'center' },
   buttonAlt: { backgroundColor: 'transparent', borderWidth: 2, borderColor: '#d4af37' },
   buttonAltText: { color: '#d4af37' },
   smallButton: { marginTop: 14, paddingVertical: 10, paddingHorizontal: 22 },
