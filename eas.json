@@ -4,14 +4,25 @@
     "appVersionSource": "remote"
   },
   "build": {
+    "base": {
+      "env": {
+        "EXPO_PUBLIC_SERVER_URL": "https://rang-server-production.up.railway.app",
+        "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyBZ7dX45Atizpqlxad1jp9A2QRlJBJbgsA",
+        "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "smdfinal-8f17a.firebaseapp.com",
+        "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "smdfinal-8f17a",
+        "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET": "smdfinal-8f17a.firebasestorage.app",
+        "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "1037480071223",
+        "EXPO_PUBLIC_FIREBASE_APP_ID": "1:1037480071223:android:4617a8626ea18462056fb2"
+      }
+    },
     "preview": {
+      "extends": "base",
       "distribution": "internal",
-      "android": { "buildType": "apk" },
-      "env": { "EXPO_PUBLIC_SERVER_URL": "https://rang-server-production.up.railway.app" }
+      "android": { "buildType": "apk" }
     },
     "production": {
-      "autoIncrement": true,
-      "env": { "EXPO_PUBLIC_SERVER_URL": "https://rang-server-production.up.railway.app" }
+      "extends": "base",
+      "autoIncrement": true
     }
   }
 }
